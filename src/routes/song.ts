@@ -5,30 +5,27 @@ const router = Router();
 const prisma = new PrismaClient();
 
 router.get('/', async function (req, res) {
-  const playlists = await prisma.playlist.findMany();
-  res.json(playlists);
+  const songs = await prisma.song.findMany();
+  res.json(songs);
 });
 
 router.get('/:id', async function (req, res) {
   const id = parseInt(req.params.id);
-  const playlist = await prisma.playlist.findUnique({
+  const song = await prisma.song.findUnique({
     where: {
       id
     },
-    include: {
-      ...req.query
-    },
   })
-  res.json(playlist);
+  res.json(song);
 });
 
 router.post('/', async function (req, res) {  
-  const playlist = await prisma.playlist.create({
+  const song = await prisma.song.create({
     data: {
       ...req.body
     },
   })
-  res.json(playlist);
+  res.json(song);
 });
 
 export { router };
