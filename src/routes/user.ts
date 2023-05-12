@@ -9,4 +9,13 @@ router.get('/', async function (req, res) {
   res.json(users);
 });
 
+router.post('/', async function (req, res) {  
+  const user = await prisma.user.create({
+    data: {
+      ...req.body
+    },
+  })
+  res.json(user);
+});
+
 export { router };
