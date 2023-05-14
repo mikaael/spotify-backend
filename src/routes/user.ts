@@ -1,5 +1,39 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { Playlist } from '@prisma/client';
+
+function validateProfileEmail(email: string) {
+  const regexLocalPart = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/;
+  const regexDomain = /^[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+  const part = email.split('@');
+
+  if (part.length !== 2) {
+    return false;
+  }
+
+  if (!regexLocalPart.test(part[0])) {
+    return false;
+  }
+
+  if (!regexDomain.test(part[1])) {
+    return false;
+  }
+
+  return true;
+}
+
+function validURL(str: string) {
+  var pattern = new RegExp(
+    '^(https?:\\/\\/)?' + // protocol
+      '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
+      '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
+      '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
+      '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
+      '(\\#[-a-z\\d_]*)?$',
+    'i'
+  ); // fragment locator
+  return !!pattern.test(str);
+}
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -9,13 +43,250 @@ router.get('/', async function (req, res) {
   res.json(users);
 });
 
-router.post('/', async function (req, res) {  
+router.post('/', async function (req, res) {
+  const {
+    email,
+    password,
+    username,
+    birthDateDay,
+    birthDateMonth,
+    birthDateYear,
+    gender_id,
+    profile_url,
+  } = req.body;
+
+  if (
+    !email ||
+    !password ||
+    !username ||
+    !birthDateDay ||
+    !birthDateMonth ||
+    !birthDateYear ||
+    !gender_id
+  ) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message:
+          'Email, password, username, praofile_url and birth_date is required!',
+      },
+    });
+  }
+
+  if (!validateProfileEmail(email)) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message: 'Email is not valid',
+      },
+    });
+  }
+
+  const userExist = await prisma.user.findFirst({ where: { email } });
+  if (userExist?.email == email) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message: 'Email already exist',
+      },
+    });
+  }
+
+  if (profile_url && (profile_url?.length === 0 || !validURL(profile_url))) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message: 'URL is not valid',
+      },
+    });
+  }
+
+  const birthDate = new Date(
+    birthDateYear,
+    birthDateMonth,
+    birthDateDay
+  ).getTime();
+
+  if (birthDate <= 0) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message: 'Date is not valid',
+      },
+    });
+  }
+
   const user = await prisma.user.create({
     data: {
-      ...req.body
+      gender_id: Number(gender_id),
+      region_id: 1,
+      email,
+      password,
+      username,
+      profile_url: profile_url || '',
+      birth_date: new Date(birthDate),
     },
-  })
-  res.json(user);
+  });
+  res.status(201).json({
+    body: {
+      status_code: 201,
+      status: 'success',
+      message: 'User created successfully',
+      data: user,
+    },
+  });
+});
+
+router.put('/:id', async function (req, res) {
+  const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message: 'Id is required!',
+      },
+    });
+  }
+
+  const {
+    email,
+    password,
+    username,
+    birthDateDay,
+    birthDateMonth,
+    birthDateYear,
+    gender_id,
+    profile_url,
+  } = req.body;
+
+  if (email && !validateProfileEmail(email)) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message: 'Email is not valid',
+      },
+    });
+  }
+
+  const userExistByEmail = await prisma.user.findFirst({ where: { email } });
+  if (userExistByEmail?.email == email) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message: 'Email already exist',
+      },
+    });
+  }
+
+  if (profile_url.length === 0 || !validURL(profile_url)) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message: 'URL is not valid',
+      },
+    });
+  }
+
+  const birthDate = new Date(
+    birthDateYear,
+    birthDateMonth,
+    birthDateDay
+  ).getTime();
+
+  if (birthDate <= 0) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message: 'Date is not valid',
+      },
+    });
+  }
+
+  const userExistById = await prisma.user.findFirst({
+    where: { id: Number(id) },
+  });
+  if (!userExistById) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message: 'User not found',
+      },
+    });
+  }
+
+  const updateUser = await prisma.user.update({
+    where: {
+      id: Number(id),
+    },
+    data: {
+      gender_id: Number(gender_id),
+      region_id: 1,
+      email,
+      password,
+      username,
+      profile_url,
+      birth_date: new Date(birthDate),
+    },
+  });
+  res.status(200).json({
+    body: {
+      status_code: 200,
+      status: 'success',
+      message: 'User updated successfully',
+      data: updateUser,
+    },
+  });
+});
+
+router.delete('/:id', async function (req, res) {
+  const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message:
+          'Email, password, username, praofile_url and birth_date is required!',
+      },
+    });
+  }
+
+  const userExistById = await prisma.user.findFirst({
+    where: { id: Number(id) },
+  });
+  if (!userExistById) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message: 'User not found',
+      },
+    });
+  }
+
+  await prisma.user.delete({
+    where: {
+      id: Number(id),
+    },
+  });
+  res.status(201).json({
+    body: {
+      status_code: 200,
+      status: 'success',
+      message: 'User delete successfully',
+    },
+  });
 });
 
 export { router };
