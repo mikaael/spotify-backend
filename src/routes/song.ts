@@ -1,11 +1,30 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { Request, Response} from 'express';
 
 const router = Router();
 const prisma = new PrismaClient();
 
-router.get('/', async function (req, res) {
-  const songs = await prisma.song.findMany();
+interface RequestParams {}
+
+interface ResponseBody {}
+
+interface RequestBody {}
+
+interface RequestQuery {
+  id: string[];
+}
+
+router.get('/', async function (req: Request<RequestParams, ResponseBody, RequestBody, RequestQuery>,  res: Response) {
+  let ids:number[] | undefined;
+  if(req.query.id){
+    ids = req.query.id.map(id => parseInt(id))
+  }
+  const songs = await prisma.song.findMany({
+    where: {
+      id: { in: ids}
+    }
+  });
   res.json(songs);
 });
 
