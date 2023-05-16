@@ -1,64 +1,82 @@
-import { Router } from 'express';
-import { PrismaClient, User, Playlist } from '@prisma/client';
+import { Router } from "express";
+import { PrismaClient, User, Playlist } from "@prisma/client";
 
 const router = Router();
 const prisma = new PrismaClient();
 
-interface Filter{
-  String: any
+interface Filter {
+  String: any;
 }
+//Update playlist
+router.patch("/:id", async function (req, res) {
+  const id = parseInt(req.params.id);
+  const playlist = await prisma.playlist.update({
+    where: { id },
+    data: { ...req.body },
+  });
+  res.json(playlist);
+});
 
-router.get('/', async function (req, res) {
-  let filters = {"songs": false};
+//Delete playlist
+router.delete("/:id", async function (req, res) {
+  const id = parseInt(req.params.id);
+  await prisma.playlist.delete({
+    where: { id },
+  });
+  res.sendStatus(204);
+});
+
+router.get("/", async function (req, res) {
+  let filters = { songs: false };
   let user: User | null = null;
   let playlists: Playlist[] | null = null;
 
-  if(typeof req.query.songs === "string"){
-    filters.songs = req.query.songs == "true" ? true : false; 
+  if (typeof req.query.songs === "string") {
+    filters.songs = req.query.songs == "true" ? true : false;
   }
-  
-  if(typeof req.query.userId === "string"){
+
+  if (typeof req.query.userId === "string") {
     const id = parseInt(req.query.userId);
-    user = await prisma.user.findUnique({where: {id}})
-    if(user != null){
+    user = await prisma.user.findUnique({ where: { id } });
+    if (user != null) {
       playlists = await prisma.playlist.findMany({
         where: {
-          userId: user.id
+          userId: user.id,
         },
         include: {
-          ...filters
-        }
+          ...filters,
+        },
       });
     }
-  }else{
+  } else {
     playlists = await prisma.playlist.findMany({
       include: {
-        ...filters
-      }
+        ...filters,
+      },
     });
   }
   res.json(playlists);
 });
 
-router.get('/:id', async function (req, res) {
+router.get("/:id", async function (req, res) {
   const id = parseInt(req.params.id);
   const playlist = await prisma.playlist.findUnique({
     where: {
-      id
+      id,
     },
     include: {
-      ...req.query
+      ...req.query,
     },
-  })
+  });
   res.json(playlist);
 });
 
-router.post('/', async function (req, res) {  
+router.post("/", async function (req, res) {
   const playlist = await prisma.playlist.create({
     data: {
-      ...req.body
+      ...req.body,
     },
-  })
+  });
   res.json(playlist);
 });
 
