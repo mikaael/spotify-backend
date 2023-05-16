@@ -28,4 +28,24 @@ router.post('/', async function (req, res) {
   res.json(song);
 });
 
+router.patch('/:id', async function (req, res) {
+  const id = parseInt(req.params.id);
+  const song = await prisma.song.update({ 
+    where: { id }, 
+    data: {
+      ...req.body
+    }
+  })
+  res.json(song);
+})
+
+router.delete('/:id', async function (req, res) {
+  const id = parseInt(req.params.id);
+  const song = await prisma.song.delete({ 
+    where: { id }
+    
+  })
+  res.json(song);
+})
+
 export { router };
