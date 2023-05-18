@@ -4,26 +4,22 @@ import { PrismaClient, User, Playlist } from '@prisma/client';
 const router = Router();
 const prisma = new PrismaClient();
 
-interface Filter {
-  String: any;
-}
-
 router.get('/', async function (req, res) {
   let filters = { songs: false };
   let user: User | null = null;
   let playlists: Playlist[] | null = null;
 
   if (typeof req.query.songs === 'string') {
-    filters.songs = req.query.songs == 'true' ? true : false;
+    filters.songs = req.query.songs == 'true';
   }
 
-  if (typeof req.query.userId === 'string') {
-    const id = parseInt(req.query.userId);
+  if (typeof req.query.user_id === 'string') {
+    const id = parseInt(req.query.user_id);
     user = await prisma.user.findUnique({ where: { id } });
     if (user != null) {
       playlists = await prisma.playlist.findMany({
         where: {
-          userId: user.id,
+          user_id: user.id,
         },
         include: {
           ...filters,
@@ -46,9 +42,9 @@ router.get('/:id', async function (req, res) {
   let filters = { songs: false };
 
   if (typeof req.query.songs === 'string') {
-    filters.songs = req.query.songs == 'true' ? true : false;
+    filters.songs = req.query.songs == 'true';
   }
-  console.log(req.query);
+
   const playlist = await prisma.playlist.findUnique({
     where: {
       id,
@@ -62,11 +58,11 @@ router.get('/:id', async function (req, res) {
 
 router.post('/', async function (req, res) {
   const { creator_id, title, description, cover_url } = req.body;
-  const userId = creator_id;
+  const user_id = creator_id;
 
   const playlist = await prisma.playlist.create({
     data: {
-      userId,
+      user_id,
       title,
       description,
       cover_url,

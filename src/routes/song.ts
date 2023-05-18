@@ -1,30 +1,25 @@
 import { Router } from 'express';
+
 import { PrismaClient } from '@prisma/client';
-import { Request, Response} from 'express';
+import { Request, Response } from 'express';
 
 const router = Router();
 const prisma = new PrismaClient();
 
-interface RequestParams {}
+router.get('/', async function (req, res) {
+  const { ids } = req.body;
 
-interface ResponseBody {}
-
-interface RequestBody {}
-
-interface RequestQuery {
-  id: string[];
-}
-
-router.get('/', async function (req: Request<RequestParams, ResponseBody, RequestBody, RequestQuery>,  res: Response) {
-  let ids:number[] | undefined;
-  if(req.query.id){
-    ids = req.query.id.map(id => parseInt(id))
+  let songs;
+  if (ids && ids?.length > 0) {
+    songs = await prisma.song.findMany({
+      where: {
+        id: { in: ids },
+      },
+    });
+  } else {
+    songs = await prisma.song.findMany();
   }
-  const songs = await prisma.song.findMany({
-    where: {
-      id: { in: ids}
-    }
-  });
+
   res.json(songs);
 });
 
@@ -32,39 +27,38 @@ router.get('/:id', async function (req, res) {
   const id = parseInt(req.params.id);
   const song = await prisma.song.findUnique({
     where: {
-      id
+      id,
     },
-  })
+  });
   res.json(song);
 });
 
-router.post('/', async function (req, res) {  
+router.post('/', async function (req, res) {
   const song = await prisma.song.create({
     data: {
-      ...req.body
+      ...req.body,
     },
-  })
+  });
   res.json(song);
 });
 
 router.patch('/:id', async function (req, res) {
   const id = parseInt(req.params.id);
-  const song = await prisma.song.update({ 
-    where: { id }, 
+  const song = await prisma.song.update({
+    where: { id },
     data: {
-      ...req.body
-    }
-  })
+      ...req.body,
+    },
+  });
   res.json(song);
-})
+});
 
 router.delete('/:id', async function (req, res) {
   const id = parseInt(req.params.id);
-  const song = await prisma.song.delete({ 
-    where: { id }
-    
-  })
+  const song = await prisma.song.delete({
+    where: { id },
+  });
   res.json(song);
-})
+});
 
 export { router };

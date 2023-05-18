@@ -8,15 +8,19 @@ datasource db {
 }
 
 model User {
-  id          Int        @id @default(autoincrement())
-  gender_id   Int
-  region_id   Int
+  id        Int @id @default(autoincrement())
+  gender_id Int
+  region_id Int
+
   email       String     @unique
   password    String
   username    String
   profile_url String
   birth_date  DateTime
   playlists   Playlist[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
 }
 
 model Author {
@@ -24,36 +28,51 @@ model Author {
   name String @unique
 
   songs Song[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
 }
 
 model Song {
-  id                  Int    @id @default(autoincrement())
-  album_id            Int?
+  id        Int  @id @default(autoincrement())
+  album_id  Int?
+  author_id Int?
+
   title               String
   cover_url           String
   audio_url           String
   duration_in_seconds Int
 
-  songs     SongOnPlaylist[]
-  author    Author?          @relation(fields: [author_id], references: [id])
-  author_id Int?
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+
+  songs  SongOnPlaylist[]
+  author Author?          @relation(fields: [author_id], references: [id])
 }
 
 model Playlist {
-  id          Int              @id @default(autoincrement())
+  id      Int @id @default(autoincrement())
+  user_id Int
+
   title       String
   description String?
   cover_url   String?
-  songs       SongOnPlaylist[]
-  user        User             @relation(fields: [user_id], references: [id])
-  user_id     Int
+
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+
+  songs SongOnPlaylist[]
+  user  User             @relation(fields: [user_id], references: [id])
 }
 
 model SongOnPlaylist {
-  id          Int      @id @default(autoincrement())
-  added_at    DateTime
-  playlist    Playlist @relation(fields: [playlist_id], references: [id])
+  id          Int @id @default(autoincrement())
   playlist_id Int
-  song        Song     @relation(fields: [song_id], references: [id])
   song_id     Int
+
+  added_at   DateTime @default(now())
+  updated_at DateTime @default(now())
+
+  playlist Playlist @relation(fields: [playlist_id], references: [id])
+  song     Song     @relation(fields: [song_id], references: [id])
 }

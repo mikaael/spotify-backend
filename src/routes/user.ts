@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, User } from '@prisma/client';
 import { Playlist } from '@prisma/client';
 
 function validateProfileEmail(email: string) {
@@ -43,33 +43,60 @@ router.get('/', async function (req, res) {
   res.json(users);
 });
 
+router.get('/:id', async function (req, res) {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({
+      body: {
+        status_code: 400,
+        status: 'failed',
+        message: 'Id is not valid',
+      },
+    });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: Number(id),
+    },
+  });
+
+  return res.json(user);
+});
+
 router.post('/', async function (req, res) {
   const {
     email,
     password,
     username,
-    birthDateDay,
-    birthDateMonth,
-    birthDateYear,
+    birth_date,
     gender_id,
     profile_url,
+    region_id,
   } = req.body;
+
+  const userBirthDate = new Date(birth_date);
+
+  const birthDateDay = userBirthDate?.getDate();
+  const birthDateMonth = userBirthDate?.getMonth();
+  const birthDateYear = userBirthDate?.getFullYear();
 
   if (
     !email ||
     !password ||
     !username ||
-    !birthDateDay ||
-    !birthDateMonth ||
-    !birthDateYear ||
-    !gender_id
+    (!birthDateDay && birthDateDay !== 0) ||
+    (!birthDateMonth && birthDateMonth !== 0) ||
+    (!birthDateYear && birthDateYear !== 0) ||
+    (!gender_id && gender_id !== 0)
   ) {
     return res.status(400).json({
       body: {
         status_code: 400,
         status: 'failed',
         message:
-          'Email, password, username, praofile_url and birth_date is required!',
+          'Email, password, username, profile_url and birth_date is required!',
       },
     });
   }
@@ -105,31 +132,31 @@ router.post('/', async function (req, res) {
     });
   }
 
-  const birthDate = new Date(
-    birthDateYear,
-    birthDateMonth,
-    birthDateDay
-  ).getTime();
+  // const birthDate = new Date(
+  //   birthDateYear,
+  //   birthDateMonth,
+  //   birthDateDay
+  // ).getTime();
 
-  if (birthDate <= 0) {
-    return res.status(400).json({
-      body: {
-        status_code: 400,
-        status: 'failed',
-        message: 'Date is not valid',
-      },
-    });
-  }
+  // if (birthDate <= 0) {
+  //   return res.status(400).json({
+  //     body: {
+  //       status_code: 400,
+  //       status: 'failed',
+  //       message: 'Date is not valid',
+  //     },
+  //   });
+  // }
 
   const user = await prisma.user.create({
     data: {
       gender_id: Number(gender_id),
-      region_id: 1,
+      region_id: region_id ?? 1,
       email,
       password,
       username,
       profile_url: profile_url || '',
-      birth_date: new Date(birthDate),
+      birth_date: new Date(birthDateYear, birthDateMonth, birthDateDay),
     },
   });
   res.status(201).json({
@@ -142,27 +169,17 @@ router.post('/', async function (req, res) {
   });
 });
 
-router.put('/:id', async function (req, res) {
+router.patch('/:id', async function (req, res) {
   const { id } = req.params;
-  if (!id) {
-    return res.status(400).json({
-      body: {
-        status_code: 400,
-        status: 'failed',
-        message: 'Id is required!',
-      },
-    });
-  }
 
   const {
     email,
     password,
     username,
-    birthDateDay,
-    birthDateMonth,
-    birthDateYear,
+    birth_date,
     gender_id,
     profile_url,
+    region_id,
   } = req.body;
 
   if (email && !validateProfileEmail(email)) {
@@ -175,18 +192,18 @@ router.put('/:id', async function (req, res) {
     });
   }
 
-  const userExistByEmail = await prisma.user.findFirst({ where: { email } });
-  if (userExistByEmail?.email == email) {
-    return res.status(400).json({
-      body: {
-        status_code: 400,
-        status: 'failed',
-        message: 'Email already exist',
-      },
-    });
-  }
+  // const userExistByEmail = await prisma.user.findFirst({ where: { email } });
+  // if (userExistByEmail?.email == email) {
+  //   return res.status(400).json({
+  //     body: {
+  //       status_code: 400,
+  //       status: 'failed',
+  //       message: 'Email already exist',
+  //     },
+  //   });
+  // }
 
-  if (profile_url.length === 0 || !validURL(profile_url)) {
+  if (profile_url && (profile_url.length === 0 || !validURL(profile_url))) {
     return res.status(400).json({
       body: {
         status_code: 400,
@@ -196,25 +213,26 @@ router.put('/:id', async function (req, res) {
     });
   }
 
-  const birthDate = new Date(
-    birthDateYear,
-    birthDateMonth,
-    birthDateDay
-  ).getTime();
+  // const birthDate = new Date(
+  //   birthDateYear,
+  //   birthDateMonth,
+  //   birthDateDay
+  // ).getTime();
 
-  if (birthDate <= 0) {
-    return res.status(400).json({
-      body: {
-        status_code: 400,
-        status: 'failed',
-        message: 'Date is not valid',
-      },
-    });
-  }
+  // if (birthDate <= 0) {
+  //   return res.status(400).json({
+  //     body: {
+  //       status_code: 400,
+  //       status: 'failed',
+  //       message: 'Date is not valid',
+  //     },
+  //   });
+  // }
 
   const userExistById = await prisma.user.findFirst({
     where: { id: Number(id) },
   });
+
   if (!userExistById) {
     return res.status(400).json({
       body: {
@@ -230,13 +248,15 @@ router.put('/:id', async function (req, res) {
       id: Number(id),
     },
     data: {
-      gender_id: Number(gender_id),
-      region_id: 1,
-      email,
-      password,
-      username,
-      profile_url,
-      birth_date: new Date(birthDate),
+      gender_id:
+        gender_id && gender_id !== 0 ? gender_id : userExistById.gender_id,
+      region_id:
+        region_id && region_id !== 0 ? region_id : userExistById.region_id,
+      email: email ?? userExistById.email,
+      password: password ?? userExistById.password,
+      username: username ?? userExistById.username,
+      profile_url: profile_url ?? userExistById.profile_url,
+      birth_date: birth_date ? new Date(birth_date) : userExistById.birth_date,
     },
   });
   res.status(200).json({
@@ -251,16 +271,6 @@ router.put('/:id', async function (req, res) {
 
 router.delete('/:id', async function (req, res) {
   const { id } = req.params;
-  if (!id) {
-    return res.status(400).json({
-      body: {
-        status_code: 400,
-        status: 'failed',
-        message:
-          'Email, password, username, praofile_url and birth_date is required!',
-      },
-    });
-  }
 
   const userExistById = await prisma.user.findFirst({
     where: { id: Number(id) },
